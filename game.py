@@ -1,7 +1,7 @@
 import pygame
 import random
 from enum import Enum
-from collections import namedtuple
+from collections import namedtuple, deque
 import numpy as np
 
 pygame.init()
@@ -24,7 +24,7 @@ BLUE2 = (0, 100, 255)
 BLACK = (0,0,0)
 
 BLOCK_SIZE = 20
-SPEED = 40
+SPEED = 1000
 
 class SnakeGameAI:
 
@@ -87,6 +87,7 @@ class SnakeGameAI:
             reward = 10
             self._place_food()
         else:
+            reward = -0.1
             self.snake.pop()
         
         # 5. update ui and clock
@@ -95,6 +96,33 @@ class SnakeGameAI:
         # 6. return game over and score
         return reward, game_over, self.score
 
+    def has_escape_path(self, start_point, max_steps=5):
+        """
+        Use BFS to determine if there's an escape path from the snake's head within max_steps.
+        This checks if moving in the given direction will trap the snake within its own body.
+        """
+        queue = deque([(start_point, 0)])  # (current position, step count)
+        visited = set()
+        visited.add(start_point)
+        
+        while queue:
+            position, steps = queue.popleft()
+            
+            # If we exceed max_steps or if we've found an escape route, exit the loop
+            if steps > max_steps:
+                return True
+            if position.x < 0 or position.x >= self.w or position.y < 0 or position.y >= self.h:
+                return True  # Found an escape
+
+            # Check adjacent positions (left, right, up, down)
+            for direction in [(BLOCK_SIZE, 0), (-BLOCK_SIZE, 0), (0, BLOCK_SIZE), (0, -BLOCK_SIZE)]:
+                new_position = Point(position.x + direction[0], position.y + direction[1])
+
+                if new_position not in visited and new_position not in self.snake:
+                    queue.append((new_position, steps + 1))
+                    visited.add(new_position)
+
+        return False  # No escape path found
 
     def is_collision(self, pt=None):
         if pt is None:
