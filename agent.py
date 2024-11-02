@@ -9,30 +9,44 @@ from helper import plot
 import pygame as pg
 from pygame.locals import *
 
-MAX_MEMORY = 1_000_000
+# Training params
+MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
-LR = 0.001
+IN_STATE_LEN = 11
+
+# Q-learning params
+LR = 0.001       # to Adam optimizer
+ALPHA = 0.5      # unused for Deep-Q-learning,
+GAMMA = 0.9      # discount rate
+EPSILON = 0      # unused, currently hard-coded
+
+# SnakeGameAI params
+BLOCK_SIZE = 20
+SPEED = 100
 
 
 class Agent:
 
     def __init__(self):
-        self.epsilon = 0  # randomness
-        self.gamma = 0.9  # discount rate
-        self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
-        self.model = Linear_QNet(11, 256, 3)
+        self.epsilon = EPSILON  # randomness
+        self.alpha = ALPHA
+        self.gamma = GAMMA
+        self.memory = deque(maxlen=MAX_MEMORY)
+        self.model = Linear_QNet(
+            input_size=IN_STATE_LEN, hidden_size=256, output_size=3)
         self.model.load()
         self.n_games = self.model.n_games
         self.record = self.model.record
         self.total_score = self.model.total_score
-        self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
+        self.trainer = QTrainer(
+            self.model, lr=LR, gamma=self.gamma, alpha=self.alpha)
 
     def get_state(self, game):
         head = game.snake[0]
-        point_l = Point(head.x - 20, head.y)
-        point_r = Point(head.x + 20, head.y)
-        point_u = Point(head.x, head.y - 20)
-        point_d = Point(head.x, head.y + 20)
+        point_l = Point(head.x - BLOCK_SIZE, head.y)
+        point_r = Point(head.x + BLOCK_SIZE, head.y)
+        point_u = Point(head.x, head.y - BLOCK_SIZE)
+        point_d = Point(head.x, head.y + BLOCK_SIZE)
 
         dir_l = game.direction == Direction.LEFT
         dir_r = game.direction == Direction.RIGHT
@@ -124,7 +138,7 @@ def train():
     agent = Agent()
     total_score = agent.total_score
     record = agent.record
-    game = SnakeGameAI()
+    game = SnakeGameAI(BLOCK_SIZE=BLOCK_SIZE, SPEED=SPEED)
     running = True
     while running:
         for event in pg.event.get():
